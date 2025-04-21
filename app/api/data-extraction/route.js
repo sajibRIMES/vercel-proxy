@@ -36,7 +36,17 @@ export async function GET(request) {
     try {
         const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) {
-            throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+            const errorText = await response.text();
+            console.log(`Indian API Error: ${response.status} ${response.statusText} - ${errorText}`);
+            return new Response(JSON.stringify({ error: `Indian API failed: ${response.status} ${response.statusText}`, details: errorText }), {
+                status: response.status,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET',
+                    'Access-Control-Allow-Headers': 'x-api-key'
+                },
+            });
         }
         const data = await response.json();
         return new Response(JSON.stringify(data), {
@@ -49,7 +59,8 @@ export async function GET(request) {
             },
         });
     } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+        console.log(`Error in /api/data-extraction: ${error.message}`);
+        return new Response(JSON.stringify({ error: `Server error: ${error.message}` }), {
             status: 500,
             headers: {
                 'Content-Type': 'application/json',
