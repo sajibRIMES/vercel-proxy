@@ -1,0 +1,9 @@
+{
+    "regions": ["bom1"],
+    "functions": {
+        "app/api/proxy/route.js": {
+            "memory": 1024,
+            "maxDuration": 10
+        }
+    }
+}
