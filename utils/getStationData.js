@@ -1,5 +1,5 @@
 // File: utils/getMikliGongStationData.js
-import { getLocalDate, getFormattedDate } from "@/utils/healper";
+import { getLocalDate, getFormattedDate } from "@/utils/helpers";
 
 export async function getStationData(stationCode = '023-LBDJPG') {
     // Base url
