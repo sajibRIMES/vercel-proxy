@@ -1,4 +1,3 @@
-// File: utils/getStationData.js
 import { getLocalDate, getFormattedDate } from "@/utils/helpers";
 
 export async function getStationData(stationCode = '023-LBDJPG') {
@@ -90,11 +89,11 @@ export async function getTransboundaryRiverDataTimely(
 ) {
     const baseUrl = "https://ffs.india-water.gov.in/iam/api/new-entry-data/specification/sorted";
     const startDateObj = new Date(startDate);
-    startDateObj.setHours(new Date().getHours(), new Date().getMinutes(), new Date().getSeconds()); // Set to current time
+    startDateObj.setHours(new Date().getHours(), new Date().getMinutes(), new Date().getSeconds());
     const formattedStartDate = getFormattedDate(startDateObj);
 
     const endDateObj = new Date(endDate);
-    endDateObj.setHours(new Date().getHours(), new Date().getMinutes(), new Date().getSeconds()); // Set to current time
+    endDateObj.setHours(new Date().getHours(), new Date().getMinutes(), new Date().getSeconds());
     const formattedEndDate = getFormattedDate(endDateObj);
 
     const specification = {
@@ -166,18 +165,17 @@ export async function getTransboundaryRiverDataTimely(
         const data = await res.json();
         console.log("getTransboundaryRiverDataTimely - API response:", data);
 
-        const valueDict = {};
-        let dataDate = null;
         const dataDict = {};
-
         if (data.length > 0) {
-            dataDate = new Date(data[0].id.dataTime).toISOString().split("T")[0];
             for (const item of data.slice(0, -1)) {
                 const dt = new Date(item.id.dataTime);
+                const date = dt.toISOString().split("T")[0];
                 const hour = dt.getHours();
-                valueDict[hour] = item.dataValue;
+                if (!dataDict[date]) {
+                    dataDict[date] = {};
+                }
+                dataDict[date][hour] = item.dataValue;
             }
-            dataDict[dataDate] = valueDict;
         } else {
             console.log(`getTransboundaryRiverDataTimely - No data found for station ${stationCode} between ${startDate} and ${endDate}`);
         }
