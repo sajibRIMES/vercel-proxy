@@ -1,11 +1,8 @@
-// File: utils/getMikliGongStationData.js
+// File: utils/getStationData.js
 import { getLocalDate, getFormattedDate } from "@/utils/helpers";
 
 export async function getStationData(stationCode = '023-LBDJPG') {
-    // Base url
     const baseUrl = 'https://ffs.india-water.gov.in/iam/api/new-entry-data/specification/sorted';
-
-    // filtering process
     const sortCriteria = {
         sortOrderDtos: [
             {
@@ -15,6 +12,11 @@ export async function getStationData(stationCode = '023-LBDJPG') {
         ]
     };
 
+    const startDate = new Date().setDate(new Date().getDate() - 3);
+    const endDate = new Date();
+    const formattedStartDate = getFormattedDate(startDate);
+    const formattedEndDate = getFormattedDate(endDate);
+
     const specification = {
         where: {
             where: {
@@ -23,7 +25,7 @@ export async function getStationData(stationCode = '023-LBDJPG') {
                         valueIsRelationField: false,
                         fieldName: 'id.stationCode',
                         operator: 'eq',
-                        value: stationCode // Now using the passed station code parameter
+                        value: stationCode
                     }
                 },
                 and: {
@@ -48,7 +50,7 @@ export async function getStationData(stationCode = '023-LBDJPG') {
                     valueIsRelationField: false,
                     fieldName: 'id.dataTime',
                     operator: 'btn',
-                    value: `${getFormattedDate(new Date().setDate(new Date().getDate() - 3))},${getFormattedDate(new Date())}` // start date, end date
+                    value: `${formattedStartDate},${formattedEndDate}`
                 }
             }
         }
@@ -61,135 +63,128 @@ export async function getStationData(stationCode = '023-LBDJPG') {
 
     const finalUrl = `${baseUrl}?${queryParams.toString()}`;
 
-    const res = await fetch(finalUrl, {
-        cache: 'no-store' // Disable caching
-    });
+    try {
+        console.log("getStationData - Fetching from URL:", finalUrl);
+        const res = await fetch(finalUrl, {
+            cache: 'no-store'
+        });
 
-    if (!res.ok) {
-        // This will activate the closest `error.js` Error Boundary
-        throw new Error('Failed to fetch data');
+        if (!res.ok) {
+            console.error(`getStationData - Fetch failed with status: ${res.status}, statusText: ${res.statusText}`);
+            throw new Error(`Failed to fetch data: ${res.status} ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        console.log("getStationData - API response:", data);
+        return data;
+    } catch (error) {
+        console.error("getStationData - Error:", error.message);
+        throw error;
     }
-
-    return res.json();
 }
-
-
-// File: utils/getTransboundaryRiverDataTimely.js
 
 export async function getTransboundaryRiverDataTimely(
     stationCode = "023-LBDJPG",
     startDate = "2025-04-24",
     endDate = "2025-04-27"
-  ) {
-    // Base URL for the API
+) {
     const baseUrl = "https://ffs.india-water.gov.in/iam/api/new-entry-data/specification/sorted";
-  
-    // Calculate current hour adjusted by +6 hours (mimicking Django's logic)
-    const dateToday = new Date();
-    dateToday.setHours(dateToday.getHours() + 6);
-    const currentHour = dateToday.getHours().toString().padStart(2, "0");
-  
-    // Format dates for API
-    const formattedStartDate = `${startDate}T00:00:00.000`;
-    const formattedEndDate = `${endDate}T${currentHour}:00:00.000`;
-  
-    // Filtering criteria (same as Django view)
+    const startDateObj = new Date(startDate);
+    startDateObj.setHours(new Date().getHours(), new Date().getMinutes(), new Date().getSeconds()); // Set to current time
+    const formattedStartDate = getFormattedDate(startDateObj);
+
+    const endDateObj = new Date(endDate);
+    endDateObj.setHours(new Date().getHours(), new Date().getMinutes(), new Date().getSeconds()); // Set to current time
+    const formattedEndDate = getFormattedDate(endDateObj);
+
     const specification = {
-      where: {
         where: {
-          where: {
-            expression: {
-              valueIsRelationField: false,
-              fieldName: "id.stationCode",
-              operator: "eq",
-              value: stationCode,
+            where: {
+                where: {
+                    expression: {
+                        valueIsRelationField: false,
+                        fieldName: "id.stationCode",
+                        operator: "eq",
+                        value: stationCode,
+                    },
+                },
+                and: {
+                    expression: {
+                        valueIsRelationField: false,
+                        fieldName: "id.datatypeCode",
+                        operator: "eq",
+                        value: "HHS",
+                    },
+                },
             },
-          },
-          and: {
-            expression: {
-              valueIsRelationField: false,
-              fieldName: "id.datatypeCode",
-              operator: "eq",
-              value: "HHS",
+            and: {
+                expression: {
+                    valueIsRelationField: false,
+                    fieldName: "dataValue",
+                    operator: "null",
+                    value: "false",
+                },
             },
-          },
+            and: {
+                expression: {
+                    valueIsRelationField: false,
+                    fieldName: "id.dataTime",
+                    operator: "btn",
+                    value: `${formattedStartDate},${formattedEndDate}`,
+                },
+            },
         },
-        and: {
-          expression: {
-            valueIsRelationField: false,
-            fieldName: "dataValue",
-            operator: "null",
-            value: "false",
-          },
-        },
-        and: {
-          expression: {
-            valueIsRelationField: false,
-            fieldName: "id.dataTime",
-            operator: "btn",
-            value: `${formattedStartDate},${formattedEndDate}`,
-          },
-        },
-      },
     };
-  
-    // Sorting criteria
+
     const sortCriteria = {
-      sortOrderDtos: [
-        {
-          sortDirection: "ASC",
-          field: "id.dataTime",
-        },
-   shotgun
-      ],
+        sortOrderDtos: [
+            {
+                sortDirection: "ASC",
+                field: "id.dataTime",
+            },
+        ],
     };
-  
-    // Construct query parameters
+
     const queryParams = new URLSearchParams({
-      "sort-criteria": JSON.stringify(sortCriteria),
-      specification: JSON.stringify(specification),
+        "sort-criteria": JSON.stringify(sortCriteria),
+        specification: JSON.stringify(specification),
     });
-  
-    // Final URL
+
     const finalUrl = `${baseUrl}?${queryParams.toString()}`;
-  
+
     try {
-      // Fetch data
-      const res = await fetch(finalUrl, {
-        cache: "no-store", // Disable caching
-      });
-  
-      // Check response
-      if (!res.ok) {
-        throw new Error("Failed to fetch transboundary river data");
-      }
-  
-      // Parse JSON response
-      const data = await res.json();
-  
-      // Process response to match Django view's output
-      const valueDict = {};
-      let dataDate = null;
-      const dataDict = {};
-  
-      if (data.length > 0) {
-        // Get date from first record
-        dataDate = new Date(data[0].id.dataTime).toISOString().split("T")[0];
-  
-        // Map hours to values (exclude last record as per Django logic)
-        for (const item of data.slice(0, -1)) {
-          const dt = new Date(item.id.dataTime);
-          const hour = dt.getHours();
-          valueDict[hour] = item.dataValue;
+        console.log("getTransboundaryRiverDataTimely - Fetching from URL:", finalUrl);
+        const res = await fetch(finalUrl, {
+            cache: "no-store",
+        });
+
+        if (!res.ok) {
+            console.error(`getTransboundaryRiverDataTimely - Fetch failed with status: ${res.status}, statusText: ${res.statusText}`);
+            throw new Error(`Failed to fetch transboundary river data: ${res.status} ${res.statusText}`);
         }
-  
-        // Structure output
-        dataDict[dataDate] = valueDict;
-      }
-  
-      return dataDict;
+
+        const data = await res.json();
+        console.log("getTransboundaryRiverDataTimely - API response:", data);
+
+        const valueDict = {};
+        let dataDate = null;
+        const dataDict = {};
+
+        if (data.length > 0) {
+            dataDate = new Date(data[0].id.dataTime).toISOString().split("T")[0];
+            for (const item of data.slice(0, -1)) {
+                const dt = new Date(item.id.dataTime);
+                const hour = dt.getHours();
+                valueDict[hour] = item.dataValue;
+            }
+            dataDict[dataDate] = valueDict;
+        } else {
+            console.log(`getTransboundaryRiverDataTimely - No data found for station ${stationCode} between ${startDate} and ${endDate}`);
+        }
+
+        return dataDict;
     } catch (error) {
-      console.error("Error fetching transboundary river data:", error);
-      throw error;
+        console.error("getTransboundaryRiverDataTimely - Error:", error.message);
+        throw error;
     }
-  }
+}
